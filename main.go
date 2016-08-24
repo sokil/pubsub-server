@@ -25,15 +25,17 @@ func main() {
 		}
 		fmt.Println("Connection accepted")
 
-		// read request
-		request, _, err:= bufio.NewReader(connection).ReadLine()
+		go func() {
+			// read request
+			request, _, _:= bufio.NewReader(connection).ReadLine()
 
-		// send response
-		writer:= bufio.NewWriter(connection)
-		writer.WriteString("Request: " + string(request) + "\n")
-		writer.Flush()
+			// send response
+			writer:= bufio.NewWriter(connection)
+			writer.WriteString("Request: " + string(request) + "\n")
+			writer.Flush()
 
-		// close connection
-		connection.Close()
+			// close connection
+			connection.Close()
+		}()
 	}
 }

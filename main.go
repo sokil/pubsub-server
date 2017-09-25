@@ -11,6 +11,29 @@ import (
 const DEFAULT_HOST = "127.0.0.1"
 const DEFAULT_PORT = 42042
 
+func handleRequests(channel chan string, connection net.Conn, connectionId int) {
+	// create reader
+	reader := bufio.NewReader(connection)
+
+	// wait for next read buffer ready
+	for {
+		// check if connection still alive
+		// ...
+
+		// read request
+		request, _, err := reader.ReadLine()
+		if err != nil {
+			fmt.Println("Error reading request stream", err)
+			// stop reading buffer and exit goroutine
+			break
+		} else {
+			fmt.Println(fmt.Sprintf("Connection %d accept message: %s", connectionId, string(request)))
+			// send request to channel
+			channel <- string(request)
+		}
+	}
+}
+
 func main() {
 	host := *flag.String("host", DEFAULT_HOST, "Host")
 	port := *flag.Int("port", DEFAULT_PORT, "Port")
@@ -26,11 +49,11 @@ func main() {
 	}
 
 	// channel
-	channel := make(chan string)
+	channel := make(chan string, 10)
 
 	// prepare connection pool
 	connectionId := 0
-	connectionPool := [10]net.Conn {}
+	connectionPool := [10]net.Conn{}
 
 	// accept connections
 	fmt.Println("Waiting for incoming connection")
@@ -49,48 +72,30 @@ func main() {
 			connectionId = connectionId + 1
 
 			// handle request
-			go func(channel chan string) {
-				fmt.Println(fmt.Sprintf("Accepting connection %d", connectionId))
-
-				// create reader
-				reader := bufio.NewReader(connection)
-
-				// wait for next read buffer ready
-				for {
-					// check if connection still alive
-					// ...
-
-					// read request
-					request, _, err := reader.ReadLine()
-					if err != nil {
-						fmt.Println("Error reading request stream", err)
-						// stop reading buffer and exit goroutine
-						break
-					} else {
-						fmt.Println(fmt.Sprintf("Connection %d accept message: %s", connectionId, string(request)))
-						// send request to channel
-						channel <- string(request)
-					}
-				}
-			}(channel)
+			fmt.Println(fmt.Sprintf("Accepting connection %d", connectionId))
+			go handleRequests(channel, connection, connectionId)
 		}
 	}()
 
 	// get request from channel
 	for {
 		// get request from channel
-		request := <- channel
+		request := <-channel
 		fmt.Println("Request in channel:", request)
 
 		// send request to all connections
 		go func() {
 			// send response
-			for targetConnectionId, targetConnection :=range connectionPool {
+			for targetConnectionId, targetConnection := range connectionPool {
+				// todo: make resizeable connection pool
+				if targetConnection == nil {
+					continue
+				}
 				if connectionId == targetConnectionId {
 					continue
 				}
 				fmt.Println(fmt.Sprintf("Sending to connection %d", targetConnectionId))
-				writer:= bufio.NewWriter(targetConnection)
+				writer := bufio.NewWriter(targetConnection)
 				writer.WriteString(string(request) + "\n")
 				writer.Flush()
 			}

@@ -6,7 +6,7 @@ import (
 	"bufio"
 	"flag"
 	"os"
-	"./pubsub"
+	"./server"
 )
 
 const DEFAULT_HOST = "127.0.0.1"
@@ -22,7 +22,7 @@ type message struct {
 func acceptConnections(
 	messageChannel chan message,
 	socket net.Listener,
-	connectionPool pubsub.ConnectionPool,
+	connectionPool server.ConnectionPool,
 ) {
 	// wait to accept connection
 	for {
@@ -73,7 +73,7 @@ func waitMessage(
 // send message to all subscribers
 func publishMessage(
 	messageChannel chan message,
-	connectionPool pubsub.ConnectionPool,
+	connectionPool server.ConnectionPool,
 ) {
 	// get request from channel
 	for {
@@ -113,7 +113,7 @@ func main() {
 	channel := make(chan message, MESSAGE_CHANNEL_LENGTH)
 
 	// prepare connection pool
-	connectionPool := pubsub.NewConnectionPool()
+	connectionPool := server.NewConnectionPool()
 
 	// accept connections
 	go acceptConnections(channel, socket, connectionPool)

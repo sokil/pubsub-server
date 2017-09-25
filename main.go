@@ -6,12 +6,40 @@ import (
 	"bufio"
 	"flag"
 	"os"
+	"./pubsub"
 )
 
 const DEFAULT_HOST = "127.0.0.1"
 const DEFAULT_PORT = 42042
 
-func handleRequests(channel chan string, connection net.Conn, connectionId int) {
+// wait new connection on listening socket
+func acceptConnections(
+	channel chan string,
+	socket net.Listener,
+	connectionPool pubsub.ConnectionPool,
+) {
+	// wait to accept connection
+	for {
+		// accept connection
+		connection, err := socket.Accept()
+		if err != nil {
+			fmt.Print("Error accepting connection", err)
+			break
+		}
+
+		// add connection to pool
+		connectionPool.Add(connection)
+
+		// handle request
+		go waitMessage(channel, connection)
+	}
+}
+
+// wait message in accepted connection
+func waitMessage(
+	channel chan string,
+	connection net.Conn,
+) {
 	// create reader
 	reader := bufio.NewReader(connection)
 
@@ -23,14 +51,42 @@ func handleRequests(channel chan string, connection net.Conn, connectionId int) 
 		// read request
 		request, _, err := reader.ReadLine()
 		if err != nil {
-			fmt.Println("Error reading request stream", err)
 			// stop reading buffer and exit goroutine
 			break
 		} else {
-			fmt.Println(fmt.Sprintf("Connection %d accept message: %s", connectionId, string(request)))
 			// send request to channel
 			channel <- string(request)
 		}
+	}
+}
+
+// send message to all subscribers
+func publishMessage(
+	channel chan string,
+	connectionPool pubsub.ConnectionPool,
+) {
+	// get request from channel
+	for {
+		// get request from channel
+		request := <-channel
+
+		// send request to all connections
+		go func() {
+			// send response
+			connectionPool.Iterate(func(targetConnection net.Conn, targetConnectionId int) {
+				// todo: make resizeable connection pool
+				if targetConnection == nil {
+					return
+				}
+				//if connectionId == targetConnectionId {
+				//	continue
+				//}
+				fmt.Println(fmt.Sprintf("Sending to connection %d", targetConnectionId))
+				writer := bufio.NewWriter(targetConnection)
+				writer.WriteString(string(request) + "\n")
+				writer.Flush()
+			})
+		}()
 	}
 }
 
@@ -52,53 +108,11 @@ func main() {
 	channel := make(chan string, 10)
 
 	// prepare connection pool
-	connectionId := 0
-	connectionPool := [10]net.Conn{}
+	connectionPool := pubsub.NewConnectionPool()
 
 	// accept connections
-	fmt.Println("Waiting for incoming connection")
-	go func() {
-		// wait to accept connection
-		for {
-			// accept connection
-			connection, err := socket.Accept()
-			if err != nil {
-				fmt.Print("Error accepting connection", err)
-				continue
-			}
+	go acceptConnections(channel, socket, connectionPool)
 
-			// add connection to pool
-			connectionPool[connectionId] = connection
-			connectionId = connectionId + 1
-
-			// handle request
-			fmt.Println(fmt.Sprintf("Accepting connection %d", connectionId))
-			go handleRequests(channel, connection, connectionId)
-		}
-	}()
-
-	// get request from channel
-	for {
-		// get request from channel
-		request := <-channel
-		fmt.Println("Request in channel:", request)
-
-		// send request to all connections
-		go func() {
-			// send response
-			for targetConnectionId, targetConnection := range connectionPool {
-				// todo: make resizeable connection pool
-				if targetConnection == nil {
-					continue
-				}
-				if connectionId == targetConnectionId {
-					continue
-				}
-				fmt.Println(fmt.Sprintf("Sending to connection %d", targetConnectionId))
-				writer := bufio.NewWriter(targetConnection)
-				writer.WriteString(string(request) + "\n")
-				writer.Flush()
-			}
-		}()
-	}
+	// publish request
+	publishMessage(channel, connectionPool)
 }

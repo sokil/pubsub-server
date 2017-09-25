@@ -11,10 +11,16 @@ import (
 
 const DEFAULT_HOST = "127.0.0.1"
 const DEFAULT_PORT = 42042
+const MESSAGE_CHANNEL_LENGTH = 10
+
+type message struct {
+	payload string
+	sourceConnectionId int
+}
 
 // wait new connection on listening socket
 func acceptConnections(
-	channel chan string,
+	messageChannel chan message,
 	socket net.Listener,
 	connectionPool pubsub.ConnectionPool,
 ) {
@@ -28,17 +34,18 @@ func acceptConnections(
 		}
 
 		// add connection to pool
-		connectionPool.Add(connection)
+		connectionId := connectionPool.Add(connection)
 
 		// handle request
-		go waitMessage(channel, connection)
+		go waitMessage(messageChannel, connection, connectionId)
 	}
 }
 
 // wait message in accepted connection
 func waitMessage(
-	channel chan string,
+	messageChannel chan message,
 	connection net.Conn,
+	connectionId int,
 ) {
 	// create reader
 	reader := bufio.NewReader(connection)
@@ -55,35 +62,33 @@ func waitMessage(
 			break
 		} else {
 			// send request to channel
-			channel <- string(request)
+			messageChannel <- message {
+				payload: string(request),
+				sourceConnectionId: connectionId,
+			}
 		}
 	}
 }
 
 // send message to all subscribers
 func publishMessage(
-	channel chan string,
+	messageChannel chan message,
 	connectionPool pubsub.ConnectionPool,
 ) {
 	// get request from channel
 	for {
 		// get request from channel
-		request := <-channel
+		message := <-messageChannel
 
 		// send request to all connections
 		go func() {
 			// send response
 			connectionPool.Iterate(func(targetConnection net.Conn, targetConnectionId int) {
-				// todo: make resizeable connection pool
-				if targetConnection == nil {
+				if message.sourceConnectionId == targetConnectionId {
 					return
 				}
-				//if connectionId == targetConnectionId {
-				//	continue
-				//}
-				fmt.Println(fmt.Sprintf("Sending to connection %d", targetConnectionId))
 				writer := bufio.NewWriter(targetConnection)
-				writer.WriteString(string(request) + "\n")
+				writer.WriteString(string(message.payload) + "\n")
 				writer.Flush()
 			})
 		}()
@@ -105,7 +110,7 @@ func main() {
 	}
 
 	// channel
-	channel := make(chan string, 10)
+	channel := make(chan message, MESSAGE_CHANNEL_LENGTH)
 
 	// prepare connection pool
 	connectionPool := pubsub.NewConnectionPool()

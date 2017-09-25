@@ -15,9 +15,10 @@ func NewConnectionPool() ConnectionPool {
 }
 
 // add collection to pool
-func (pool ConnectionPool) Add(connection net.Conn) {
+func (pool ConnectionPool) Add(connection net.Conn) int {
 	nextConnectionId := len(pool.list)
 	pool.list[nextConnectionId] = connection
+	return nextConnectionId
 }
 
 // remove connection from pool

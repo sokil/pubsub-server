@@ -31,7 +31,7 @@ func main() {
 		fmt.Println("Error starting server: ", err)
 		os.Exit(1)
 	} else {
-		fmt.Println(fmt.Sprintf("Server started on %s:%d", *host, *port))
+		fmt.Println(fmt.Sprintf("Server started on %s", bindAddress))
 	}
 
 	// channel

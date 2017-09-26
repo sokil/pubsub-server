@@ -1,6 +1,6 @@
 # pubsub
 
-Publish/Subscribe seever which broadcast messages to all other connected clients
+Publish/Subscribe server in Go which broadcast messages to all other connected clients
 
 ## Building
 

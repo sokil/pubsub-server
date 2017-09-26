@@ -35,16 +35,16 @@ func main() {
 	}
 
 	// channel
-	channel := make(chan message, MESSAGE_CHANNEL_LENGTH)
+	messageChannel := make(chan message, MESSAGE_CHANNEL_LENGTH)
 
 	// prepare connection pool
 	connectionPool := server.NewConnectionPool()
 
 	// accept connections
-	go acceptConnections(channel, socket, connectionPool)
+	go acceptConnections(messageChannel, socket, connectionPool)
 
 	// publish request
-	publishMessage(channel, connectionPool)
+	publishMessage(messageChannel, connectionPool)
 }
 
 // wait new connection on listening socket

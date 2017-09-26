@@ -32,8 +32,9 @@ func (pool *ConnectionPool) Add(connection net.Conn) int {
 // get connection by id
 func (pool *ConnectionPool) Get(connectionId int) net.Conn {
 	pool.mutex.RLock()
-	return pool.list[connectionId]
+	connection := pool.list[connectionId]
 	pool.mutex.RUnlock()
+	return connection
 }
 
 // remove connection from pool

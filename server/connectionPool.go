@@ -32,7 +32,7 @@ func (pool ConnectionPool) Size() int {
 }
 
 // iterator
-func (pool ConnectionPool) Iterate(callback func(net.Conn, int)) {
+func (pool ConnectionPool) Range(callback func(net.Conn, int)) {
 	for connectionId, connection := range pool.list {
 		callback(connection, connectionId)
 	}

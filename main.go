@@ -83,7 +83,7 @@ func publishMessage(
 		// send request to all connections
 		go func() {
 			// send response
-			connectionPool.Iterate(func(targetConnection net.Conn, targetConnectionId int) {
+			connectionPool.Range(func(targetConnection net.Conn, targetConnectionId int) {
 				if message.sourceConnectionId == targetConnectionId {
 					return
 				}

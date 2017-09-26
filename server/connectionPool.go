@@ -29,6 +29,11 @@ func (pool *ConnectionPool) Add(connection net.Conn) int {
 	return nextConnectionId
 }
 
+// get connection by id
+func (pool *ConnectionPool) Get(connectionId int) net.Conn {
+	return pool.list[connectionId]
+}
+
 // remove connection from pool
 func (pool *ConnectionPool) Remove(connectionId int) {
 	pool.mutex.Lock()

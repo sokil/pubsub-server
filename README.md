@@ -7,6 +7,7 @@ Publish/Subscribe server in Go which broadcast messages to all other connected c
 ```
 git clone https://github.com/sokil/pubsub
 cd pubsub
+go get -d ./...
 go build
 ```
 

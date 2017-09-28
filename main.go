@@ -6,7 +6,7 @@ import (
 	"bufio"
 	"flag"
 	"os"
-	"./server"
+	"github.com/sokil/go-connection-pool"
 	"log"
 	"io/ioutil"
 )
@@ -38,7 +38,7 @@ func main() {
 	bindAddress := fmt.Sprintf("%s:%d", *host, *port)
 	socket, err := net.Listen("tcp", bindAddress)
 	if err != nil {
-		log.Fatalln("Error starting server. ", err)
+		log.Fatalln("Error starting connectionPool. ", err)
 		os.Exit(1)
 	} else {
 		log.Printf("Server started on %s", bindAddress)
@@ -48,7 +48,7 @@ func main() {
 	messageChannel := make(chan message, MESSAGE_CHANNEL_LENGTH)
 
 	// prepare connection pool
-	connectionPool := server.NewConnectionPool()
+	connectionPool := connectionPool.NewConnectionPool()
 
 	// accept connections
 	go acceptConnections(messageChannel, socket, connectionPool)
@@ -61,7 +61,7 @@ func main() {
 func acceptConnections(
 	messageChannel chan message,
 	socket net.Listener,
-	connectionPool server.ConnectionPool,
+	connectionPool connectionPool.ConnectionPool,
 ) {
 	// wait to accept connection
 	for {
@@ -90,7 +90,7 @@ func acceptConnections(
 // wait message in accepted connection
 func waitMessage(
 	messageChannel chan message,
-	connectionPool server.ConnectionPool,
+	connectionPool connectionPool.ConnectionPool,
 	connectionId int,
 ) {
 	// create reader
@@ -122,7 +122,7 @@ func waitMessage(
 // send message to all subscribers
 func publishMessage(
 	messageChannel chan message,
-	connectionPool server.ConnectionPool,
+	connectionPool connectionPool.ConnectionPool,
 ) {
 	// get request from channel
 	for {

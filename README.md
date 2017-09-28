@@ -15,7 +15,7 @@ go build
 Start server:
 
 ```
-./pubsub --port=12345 --host=localhost
+./pubsub --port=12345 --host=localhost --verbose
 ```
 
 Add few connections to server:
